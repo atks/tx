@@ -30,19 +30,19 @@ import pickle
 import bz2
 import _pickle as cPickle
 import gzip
-import marshal
 
 def main():
-    user_directory = os.getcwd()
-    home_directory = os.path.expanduser('~')
-
+    cwd = os.getcwd()
+    txdb_dir = os.getenv('TXDB')
+            
     parser = argparse.ArgumentParser(
-         description='Print lineage of a node',
+         description='Make a taxanomic database',
          formatter_class=argparse.RawDescriptionHelpFormatter,
          epilog=textwrap.dedent('''\
-           usage: taxgetparents <tax-id> -d taxdmp.tar.gz 
+           usage: taxgetparents --db <tax-id> -d taxdmp.tar.gz 
            '''))
     parser.add_argument('tax_id', metavar='tax_id', help='taxonomic ID', type=str)
+    parser.add_argument('-db', '--db', help='NCBI Taxonomic DB dump compressed tar ball', type=str)
     parser.add_argument('-d', '--taxadumptarball', help='NCBI Taxonomic DB dump compressed tar ball', type=str)
     args = parser.parse_args()
     print(args.tax_id)
@@ -96,54 +96,42 @@ def main():
     print(f'Time elapse: {time_elapsed}s')
     
 
-#    start = time.time()
-#    print('Pickling taxonomic database')
-#    with open('taxnodes.pickle', 'wb') as handle:
-#        pickle.dump(TAXNODES, handle, protocol=pickle.HIGHEST_PROTOCOL)
-#    with open('names.pickle', 'wb') as handle:
-#        pickle.dump(NAMES, handle, protocol=pickle.HIGHEST_PROTOCOL)
-#    end = time.time()
-#    time_elapsed = round(end - start, 0)
-#    print(f'Time elapse: {time_elapsed}s')      
-
+    
     start = time.time()
-    print('Marshalling taxonomic database')
-    with open('taxnodes.marshal', 'wb') as handle:
-        marshal.dump(TAXNODES, handle)
-    with open('names.marshal', 'wb') as handle:
-        marshal.dump(NAMES, handle)
+    print('Pickling taxonomic database')
+    with open('taxnodes.pickle', 'wb') as handle:
+        pickle.dump(TAXNODES, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    with open('names.pickle', 'wb') as handle:
+        pickle.dump(NAMES, handle, protocol=pickle.HIGHEST_PROTOCOL)
     end = time.time()
     time_elapsed = round(end - start, 0)
-    print(f'Time elapse: {time_elapsed}s') 
-      
-#    start = time.time()
-#    print('Compressed bz2 pickling taxonomic database')
-#            
-#    with bz2.BZ2File('taxnodes.pickle.bz2', 'wb') as handle:
-#        cPickle.dump(TAXNODES, handle, 4)
-#
-#    with bz2.BZ2File('names.pickle.bz2', 'wb') as handle:
-#        cPickle.dump(NAMES, handle, -1)
-#    end = time.time()
-#    time_elapsed = round(end - start, 4)
-#    print(f'Time elapse: {time_elapsed}s')
-#
-#    start = time.time()
-#    print('Compressed gz pickling taxonomic database')
-#            
-#    with gzip.open('taxnodes.pickle.gz', 'wb') as handle:
-#        cPickle.dump(TAXNODES, handle, 4)
-#
-#    with gzip.open('names.pickle.gz', 'wb') as handle:
-#        cPickle.dump(NAMES, handle, -1)
-#    end = time.time()
-#    time_elapsed = round(end - start, 4)
-#    print(f'Time elapse: {time_elapsed}s')    
-#with open('filename.pickle', 'rb') as handle:
-#    b = pickle.load(handle)
-#
-#print a == b
-    
+    print(f'Time elapse: {time_elapsed}s')      
+
+    start = time.time()
+    print('Compressed bz2 pickling taxonomic database')
+            
+    with bz2.BZ2File('taxnodes.pickle.bz2', 'wb') as handle:
+        cPickle.dump(TAXNODES, handle, 4)
+
+    with bz2.BZ2File('names.pickle.bz2', 'wb') as handle:
+        cPickle.dump(NAMES, handle, -1)
+    end = time.time()
+    time_elapsed = round(end - start, 4)
+    print(f'Time elapse: {time_elapsed}s')
+
+    start = time.time()
+    print('Compressed gz pickling taxonomic database')
+            
+    with gzip.open('taxnodes.pickle.gz', 'wb') as handle:
+        cPickle.dump(TAXNODES, handle, 4)
+
+    with gzip.open('names.pickle.gz', 'wb') as handle:
+        cPickle.dump(NAMES, handle, -1)
+    end = time.time()
+    time_elapsed = round(end - start, 4)
+    print(f'Time elapse: {time_elapsed}s')    
+   
+   
     
 #    print('CHECK') 
 #    TAXNODES['1572043'].print()
