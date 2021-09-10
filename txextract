@@ -1,0 +1,197 @@
+#!/usr/bin/env python3
+
+# The MIT License
+# Copyright (c) 2021 Adrian Tan <adrian_tan@nparks.gov.sg>
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the 'Software'), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permsit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+# THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+import os
+import argparse
+import textwrap
+import tarfile
+import gzip
+import re
+import sys
+
+def main():
+    user_directory = os.getcwd()
+    home_directory = os.path.expanduser('~')
+
+    parser = argparse.ArgumentParser(
+         description='Annotate FASTQ IDs',
+         formatter_class=argparse.RawDescriptionHelpFormatter,
+         epilog=textwrap.dedent('''\
+           usage: annotatefastqids -d taxdmp.tar.gz 
+           '''))
+    parser.add_argument('fasta_file', metavar='fasta_file', help='fastQ file', type=str)
+    parser.add_argument('-d', '--taxadumptarball', help='NCBI Taxonomic DB dump compressed tar ball', type=str)
+    args = parser.parse_args()
+    print(args.fasta_file)
+    print(args.taxadumptarball)
+
+    TAXNODES = {}
+    NAMES = {}
+
+    tar = tarfile.open(args.taxadumptarball, 'r:gz')
+    for member in tar.getmembers():
+        f = tar.extractfile(member)
+        print(f'processing {member.name}', end='')
+        if member.name == 'nodes.dmp':
+            count = 0
+            for line in f:
+                sline = line.decode('utf-8').replace('\t', '')
+                params = sline.split('|')
+                count += 1
+                params.pop()                     
+                TAXNODES[params[0]] = TaxaNode(params[0], params[1], params[2], params[3],
+                                               params[4], params[5], params[6], params[7],
+                                               params[8], params[9], params[10], params[11],
+                                               params[12])                                               
+            print(f' - added {count} records')                                   
+        elif member.name == 'names.dmp':
+            count = 0
+            for line in f:
+                sline = line.decode('utf-8').replace('\t', '')
+                params = sline.split('|')
+                count += 1
+                params.pop() 
+                if params[0] not in NAMES:
+                    NAMES[params[0]] = []  
+                NAMES[params[0]].append(Name(params[0], params[1], params[2], params[3]));
+            print(f' - added {count} records')       
+        else:
+            print(f' - ignored')
+    
+#    print('CHECK') 
+#    TAXNODES['1572043'].print()
+#    NAMES['1572043'][0].print()
+#    exit()
+     
+    #process fasta file
+    f = gzip.open(args.fasta_file, 'rb')
+    count = 0
+    b = bytes('>', 'utf-8')[0]
+    no_virus = 0
+    no_unannotated = 0
+    no_not_virus = 0
+    
+    for line in f:
+        if line[0] == b:
+            sline = line.decode('utf-8')
+            tax_id = re.search('TaxID=(\d+)', sline)
+            if tax_id is not None:
+                tid = tax_id.group(1)
+                if tid in TAXNODES:
+                    if travel_up(TAXNODES[tid], TAXNODES, NAMES, False):
+                        no_virus += 1
+                        print(sline, end='')
+                    else:
+                        no_not_virus += 1
+                else:
+                    no_unannotated += 1            
+            count += 1
+            if count%100000==0:
+                print(f'lines processed : {count}', file=sys.stderr)            
+
+    #report stats
+    print(f'No. virus:        {no_virus}') 
+    print(f'No. not virus:    {no_not_virus}') 
+    print(f'No. unnannotated: {no_unannotated}') 
+
+def travel_up(node, TAXNODES, NAMES, verbose):
+    if verbose:
+        print(f'"node.tid" : {node.tid}')
+        for name in NAMES[node.tid]:
+            print(f'\t{node.tid} {name.tid} {name.name}') 
+    
+    #virus
+    if node.tid=='10239':
+        return True
+    #root    
+    elif node.tid=='1':
+        return False
+    else:
+        return travel_up(TAXNODES[node.ptid], TAXNODES, NAMES, verbose)
+            
+#TNode class representing a taxonomic node
+#	tax_id					-- node id in GenBank taxonomy database
+# 	parent tax_id				-- parent node id in GenBank taxonomy database
+# 	rank					-- rank of this node (superkingdom, kingdom, ...) 
+# 	embl code				-- locus-name prefix; not unique
+# 	division id				-- see division.dmp file
+# 	inherited div flag  (1 or 0)		-- 1 if node inherits division from parent
+# 	genetic code id				-- see gencode.dmp file
+# 	inherited GC  flag  (1 or 0)		-- 1 if node inherits genetic code from parent
+# 	mitochondrial genetic code id		-- see gencode.dmp file
+# 	inherited MGC flag  (1 or 0)		-- 1 if node inherits mitochondrial gencode from parent
+# 	GenBank hidden flag (1 or 0)            -- 1 if name is suppressed in GenBank entry lineage
+# 	hidden subtree root flag (1 or 0)       -- 1 if this subtree has no sequence data yet
+# 	comments
+class TaxaNode(object):
+    def __init__(self, tid, ptid, rank, embl_code, divid, inherited_divid, 
+                 gcid, inherited_gcid, mgcid, inherited_mgcid, gb, hidden, 
+                 comments):
+        self.tid = tid
+        self.ptid = ptid
+        self.rank = rank
+        self.embl_code = embl_code
+        self.divid = divid
+        self.inherited_divid = inherited_divid
+        self.gcid = gcid
+        self.inherited_gcid = inherited_gcid
+        self.mgcid = mgcid
+        self.inherited_mgcid = inherited_mgcid
+        self.gb = gb
+        self.hidden = hidden 
+        self.comments = comments
+
+    def print(self):
+        print(f'TaxNode attributes')
+        print(f'tid             : "{self.tid}"')
+        print(f'ptid            : "{self.ptid}"')
+        print(f'rank            : "{self.rank}"')
+        print(f'embl_code       : "{self.embl_code}"')
+        print(f'divid           : "{self.divid}"')
+        print(f'inherited_divid : "{self.inherited_divid}"')
+        print(f'gcid            : "{self.gcid}"')
+        print(f'inherited_gcid  : "{self.inherited_gcid}"')
+        print(f'mgcid           : "{self.mgcid}"')
+        print(f'inherited_mgcid : "{self.inherited_mgcid}"')
+        print(f'gb              : "{self.gb}"')
+        print(f'hidden          : "{self.hidden}"')
+        print(f'comments        : "{self.comments}"')
+
+        
+#Name class representing a name record for a taxonomic ID
+#	tax_id					-- the id of node associated with this name
+#	name_txt				-- name itself
+#	unique name				-- the unique variant of this name if name not unique
+#	name class				-- (synonym, common name, ...)                  
+class Name(object):
+    def __init__(self, tid, name, uname, name_class):
+        self.tid = tid
+        self.name = name
+        self.uname = uname
+        self.name_class = name_class
+
+    def print(self):
+        print(f'Name attributes')
+        print(f'tid             : "{self.tid}"')
+        print(f'name            : "{self.name}"')
+        print(f'uname           : "{self.uname}"')
+        print(f'name_class      : "{self.name_class}"')
+      
+main()

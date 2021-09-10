@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+
+# The MIT License
+# Copyright (c) 2021 Adrian Tan <adrian_tan@nparks.gov.sg>
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permsit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+import os
+import argparse
+import textwrap
+import tarfile
+
+def main():
+    user_directory = os.getcwd()
+    home_directory = os.path.expanduser('~')
+
+    parser = argparse.ArgumentParser(
+         description="Extract and converts the dmp files to txt",
+         formatter_class=argparse.RawDescriptionHelpFormatter,
+         epilog=textwrap.dedent('''\
+           usage: taxadmp2txt taxdmp.tar.gz
+           '''))
+    parser.add_argument("file", metavar="file", help="NCBI Taxonomic DB dump compressed tar ball", type=str)
+    args = parser.parse_args()
+    print(args.file)
+
+    TAXNODES = {}
+    NAMES = {}
+
+    tar = tarfile.open(args.file, "r:gz")
+    for member in tar.getmembers():
+        f = tar.extractfile(member)
+    
+        print(f"processing {member.name}", end="")
+        if member.name == "nodes.dmp":
+            count = 0
+            for line in f:
+                sline = line.decode("utf-8")
+                params = sline.split("|")
+                sline.replace('\t', "")
+                count += 1
+                params.pop()
+                TAXNODES[params[0]] = TaxaNode(params[0], params[1], params[2], params[3],
+                                               params[4], params[5], params[6], params[7],
+                                               params[8], params[9], params[10], params[11],
+                                               params[12]);
+            print(f" - added {count} records")                                   
+        elif member.name == "names.dmp":
+            count = 0
+            for line in f:
+                sline = line.decode("utf-8")
+                params = sline.split("|")
+                sline.replace('\t', "")
+                count += 1
+                params.pop()
+                NAMES[params[0]] = Name(params[0], params[1], params[2], params[3]);
+            print(f" - added {count} records")       
+        else:
+            print(f" - ignored")
+     
+            
+#TNode class representing a taxonomic node
+#	tax_id					-- node id in GenBank taxonomy database
+# 	parent tax_id				-- parent node id in GenBank taxonomy database
+# 	rank					-- rank of this node (superkingdom, kingdom, ...) 
+# 	embl code				-- locus-name prefix; not unique
+# 	division id				-- see division.dmp file
+# 	inherited div flag  (1 or 0)		-- 1 if node inherits division from parent
+# 	genetic code id				-- see gencode.dmp file
+# 	inherited GC  flag  (1 or 0)		-- 1 if node inherits genetic code from parent
+# 	mitochondrial genetic code id		-- see gencode.dmp file
+# 	inherited MGC flag  (1 or 0)		-- 1 if node inherits mitochondrial gencode from parent
+# 	GenBank hidden flag (1 or 0)            -- 1 if name is suppressed in GenBank entry lineage
+# 	hidden subtree root flag (1 or 0)       -- 1 if this subtree has no sequence data yet
+# 	comments
+class TaxaNode(object):
+    def __init__(self, tid, ptid, rank, embl_code, divid, inherited_divid, 
+                 gcid, inherited_gcid, mgcid, inherited_mgcid, gb, hidden, 
+                 comments):
+        self.tid = tid
+        self.ptid = ptid
+        self.rank = rank
+        self.embl_code = embl_code
+        self.divid = divid
+        self.inherited_divid = inherited_divid
+        self.gcid = gcid
+        self.inherited_gcid = inherited_gcid
+        self.mgcid = mgcid
+        self.inherited_mgcid = inherited_mgcid
+        self.gb = gb
+        self.hidden = hidden 
+        self.comments = comments
+        
+#Name class representing a name record for a taxonomic ID
+#	tax_id					-- the id of node associated with this name
+#	name_txt				-- name itself
+#	unique name				-- the unique variant of this name if name not unique
+#	name class				-- (synonym, common name, ...)                  
+class Name(object):
+    def __init__(self, tid, name, uname, name_class):
+        self.tid = tid
+        self.name = name
+        self.uname = uname
+        self.name_class = name_class
+                    
+main()
