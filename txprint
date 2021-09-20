@@ -66,31 +66,31 @@ def main():
     print(f'Time elapse: {time_elapsed}s')
     
 
-#    start = time.time()
-#    print('Loading bz2 compressed pickled taxonomic database')
-#
-#    with bz2.BZ2File('taxnodes.pickle.bz2', 'rb') as handle:
-#        TAXNODES = cPickle.load(handle)
-#
-#    with bz2.BZ2File('names.pickle.bz2', 'rb') as handle:
-#        NAMES = cPickle.load(handle)
-#
-#    end = time.time()
-#    time_elapsed = round(end - start, 0)
-#    print(f'Time elapse: {time_elapsed}s')
-#    
-#    start = time.time()
-#    print('Loading gz compressed pickled taxonomic database')
-#
-#    with gzip.open('taxnodes.pickle.gz', 'rb') as handle:
-#        TAXNODES = cPickle.load(handle)
-#
-#    with gzip.open('names.pickle.gz', 'rb') as handle:
-#        NAMES = cPickle.load(handle)
-#
-#    end = time.time()
-#    time_elapsed = round(end - start, 0)
-#    print(f'Time elapse: {time_elapsed}s')
+    start = time.time()
+    print('Loading bz2 compressed pickled taxonomic database')
+
+    with bz2.BZ2File('taxnodes.pickle.bz2', 'rb') as handle:
+        TAXNODES = cPickle.load(handle)
+
+    with bz2.BZ2File('names.pickle.bz2', 'rb') as handle:
+        NAMES = cPickle.load(handle)
+
+    end = time.time()
+    time_elapsed = round(end - start, 0)
+    print(f'Time elapse: {time_elapsed}s')
+    
+    start = time.time()
+    print('Loading gz compressed pickled taxonomic database')
+
+    with gzip.open('taxnodes.pickle.gz', 'rb') as handle:
+        TAXNODES = cPickle.load(handle)
+
+    with gzip.open('names.pickle.gz', 'rb') as handle:
+        NAMES = cPickle.load(handle)
+
+    end = time.time()
+    time_elapsed = round(end - start, 0)
+    print(f'Time elapse: {time_elapsed}s')
     
 #    print('CHECK') 
 #    TAXNODES['1572043'].print()

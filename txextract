@@ -31,62 +31,48 @@ def main():
     home_directory = os.path.expanduser('~')
 
     parser = argparse.ArgumentParser(
-         description='Annotate FASTQ IDs',
+         description='txextract FASTA/Q sequences based on taxonomic categorization',
          formatter_class=argparse.RawDescriptionHelpFormatter,
          epilog=textwrap.dedent('''\
-           usage: annotatefastqids -d taxdmp.tar.gz 
+           usage: txextract unifref.fasta -d taxdmp.tar.gz 
+           
+           examples: virus is 10239
+                     metazoan
            '''))
     parser.add_argument('fasta_file', metavar='fasta_file', help='fastQ file', type=str)
-    parser.add_argument('-d', '--taxadumptarball', help='NCBI Taxonomic DB dump compressed tar ball', type=str)
+    parser.add_argument('-d', '--database', help='Directory where pickled databases are located', type=str)
+    parser.add_argument('-t', '--taxa_ids', help='taxa IDs to extract', type=str)
     args = parser.parse_args()
     print(args.fasta_file)
-    print(args.taxadumptarball)
+    print(args.database)
+    print(args.taxa_ids)
+
+    #add taxa IDs top set
+    taxa_ids = set()
+    for ids in     
+    
 
     TAXNODES = {}
     NAMES = {}
 
-    tar = tarfile.open(args.taxadumptarball, 'r:gz')
-    for member in tar.getmembers():
-        f = tar.extractfile(member)
-        print(f'processing {member.name}', end='')
-        if member.name == 'nodes.dmp':
-            count = 0
-            for line in f:
-                sline = line.decode('utf-8').replace('\t', '')
-                params = sline.split('|')
-                count += 1
-                params.pop()                     
-                TAXNODES[params[0]] = TaxaNode(params[0], params[1], params[2], params[3],
-                                               params[4], params[5], params[6], params[7],
-                                               params[8], params[9], params[10], params[11],
-                                               params[12])                                               
-            print(f' - added {count} records')                                   
-        elif member.name == 'names.dmp':
-            count = 0
-            for line in f:
-                sline = line.decode('utf-8').replace('\t', '')
-                params = sline.split('|')
-                count += 1
-                params.pop() 
-                if params[0] not in NAMES:
-                    NAMES[params[0]] = []  
-                NAMES[params[0]].append(Name(params[0], params[1], params[2], params[3]));
-            print(f' - added {count} records')       
-        else:
-            print(f' - ignored')
-    
-#    print('CHECK') 
-#    TAXNODES['1572043'].print()
-#    NAMES['1572043'][0].print()
-#    exit()
-     
+    #unpickle taxonomic database
+    start = time.time()
+    print('Unpickling database')
+    with gzip.open('taxnodes.pickle.gz', 'rb') as handle:
+        TAXNODES = cPickle.load(handle)
+    with gzip.open('names.pickle.gz', 'rb') as handle:
+        NAMES = cPickle.load(handle)
+    end = time.time()
+    time_elapsed = round(end - start, 0)
+    print(f'Time elapse: {time_elapsed}s')
+        
     #process fasta file
     f = gzip.open(args.fasta_file, 'rb')
     count = 0
     b = bytes('>', 'utf-8')[0]
-    no_virus = 0
+    no_selected_seqeuences = 0
     no_unannotated = 0
-    no_not_virus = 0
+    no_unselected_sequences = 0
     
     for line in f:
         if line[0] == b:
