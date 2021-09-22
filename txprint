@@ -40,54 +40,23 @@ def main():
          description='Print lineage of a node',
          formatter_class=argparse.RawDescriptionHelpFormatter,
          epilog=textwrap.dedent('''\
-           usage: taxgetparents <tax-id> -d taxdmp.tar.gz 
+           usage: txprint <tax-id> -d <database_dir> 
            '''))
     parser.add_argument('tax_id', metavar='tax_id', help='taxonomic ID', type=str)
-    parser.add_argument('-d', '--taxadumptarball', help='NCBI Taxonomic DB dump compressed tar ball', type=str)
+    parser.add_argument('-d', '--database_dir', help='Directory where pickled databases are located', type=str)
     args = parser.parse_args()
     print(args.tax_id)
     print(args.taxadumptarball)
 
-
     TAXNODES = {}
     NAMES = {}
-
+   
     start = time.time()
     print('Loading pickled taxonomic database')
-    
-    with open('taxnodes.pickle', 'rb') as handle:
-        TAXNODES = pickle.load(handle)
-
-    with open('names.pickle', 'rb') as handle:
-        NAMES = pickle.load(handle)
-#
-    end = time.time()
-    time_elapsed = round(end - start, 0)
-    print(f'Time elapse: {time_elapsed}s')
-    
-
-    start = time.time()
-    print('Loading bz2 compressed pickled taxonomic database')
-
-    with bz2.BZ2File('taxnodes.pickle.bz2', 'rb') as handle:
-        TAXNODES = cPickle.load(handle)
-
-    with bz2.BZ2File('names.pickle.bz2', 'rb') as handle:
-        NAMES = cPickle.load(handle)
-
-    end = time.time()
-    time_elapsed = round(end - start, 0)
-    print(f'Time elapse: {time_elapsed}s')
-    
-    start = time.time()
-    print('Loading gz compressed pickled taxonomic database')
-
     with gzip.open('taxnodes.pickle.gz', 'rb') as handle:
         TAXNODES = cPickle.load(handle)
-
     with gzip.open('names.pickle.gz', 'rb') as handle:
         NAMES = cPickle.load(handle)
-
     end = time.time()
     time_elapsed = round(end - start, 0)
     print(f'Time elapse: {time_elapsed}s')

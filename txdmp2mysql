@@ -24,19 +24,24 @@ import textwrap
 import tarfile
 
 def main():
-    user_directory = os.getcwd()
-    home_directory = os.path.expanduser('~')
-
+   
     parser = argparse.ArgumentParser(
-         description="Extract and converts the dmp files to txt",
+         description="Extract and converts the dmp files to txt for mysql import",
          formatter_class=argparse.RawDescriptionHelpFormatter,
          epilog=textwrap.dedent('''\
-           usage: taxadmp2txt taxdmp.tar.gz
+           usage: txdmp2mysql taxdmp.tar.gz -d mysqldb
            '''))
     parser.add_argument("file", metavar="file", help="NCBI Taxonomic DB dump compressed tar ball", type=str)
+    parser.add_argument('-d', '--mysqldb_dir', help='mysqldb directory', type=str, default=os.getcwd() + '/mysqldb')
     args = parser.parse_args()
     print(args.file)
+    print(args.mysqldb_dir)
 
+    try:
+        os.makedirs(args.mysqldb_dir, exist_ok=True)
+    except OSError as error:
+        print(f'Directory {args.output_directory} cannot be created')   
+        
     TAXNODES = {}
     NAMES = {}
 
@@ -47,31 +52,35 @@ def main():
         print(f"processing {member.name}", end="")
         if member.name == "nodes.dmp":
             count = 0
+            of = open(args.mysqldb_dir + '/nodes.txt', 'w')
             for line in f:
                 sline = line.decode("utf-8")
+                sline = sline.replace('\t', "")
                 params = sline.split("|")
-                sline.replace('\t', "")
                 count += 1
                 params.pop()
-                TAXNODES[params[0]] = TaxaNode(params[0], params[1], params[2], params[3],
-                                               params[4], params[5], params[6], params[7],
-                                               params[8], params[9], params[10], params[11],
-                                               params[12]);
+                for i in range(len(params)):
+                    of.write(f'{params[i]}') if i==0 else of.write(f'\t{params[i]}')
+                of.write('\n')
+            of.close()            
             print(f" - added {count} records")                                   
         elif member.name == "names.dmp":
             count = 0
+            of = open(args.mysqldb_dir + '/names.txt', 'w')
             for line in f:
                 sline = line.decode("utf-8")
+                sline = sline.replace('\t', "")
                 params = sline.split("|")
-                sline.replace('\t', "")
                 count += 1
                 params.pop()
-                NAMES[params[0]] = Name(params[0], params[1], params[2], params[3]);
+                for i in range(len(params)):
+                    of.write(f'{params[i]}') if i==0 else of.write(f'\t{params[i]}')
+                of.write('\n')    
+            of.close()            
             print(f" - added {count} records")       
         else:
             print(f" - ignored")
-     
-            
+                 
 #TNode class representing a taxonomic node
 #	tax_id					-- node id in GenBank taxonomy database
 # 	parent tax_id				-- parent node id in GenBank taxonomy database

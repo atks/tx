@@ -31,7 +31,7 @@ def main():
     home_directory = os.path.expanduser('~')
 
     parser = argparse.ArgumentParser(
-         description='txextract FASTA/Q sequences based on taxonomic categorization',
+         description='txextract FASTA/Q sequences and accession ID from a text file based on taxonomic categorization',
          formatter_class=argparse.RawDescriptionHelpFormatter,
          epilog=textwrap.dedent('''\
            usage: txextract unifref.fasta -d taxdmp.tar.gz 
@@ -39,17 +39,18 @@ def main():
            examples: virus is 10239
                      metazoan
            '''))
-    parser.add_argument('fasta_file', metavar='fasta_file', help='fastQ file', type=str)
+    parser.add_argument('id_taxid_file', metavar='id_taxid_file', help='ID taxID mapping file', type=str)
+    parser.add_argument('-db', '--txdb_dir', help='Database directory', type=str, default=os.getcwd() + '/txdb')
     parser.add_argument('-d', '--database', help='Directory where pickled databases are located', type=str)
     parser.add_argument('-t', '--taxa_ids', help='taxa IDs to extract', type=str)
     args = parser.parse_args()
     print(args.fasta_file)
-    print(args.database)
+    print(args.txdb_dir)
     print(args.taxa_ids)
 
     #add taxa IDs top set
     taxa_ids = set()
-    for ids in     
+#    for ids in     
     
 
     TAXNODES = {}
@@ -70,7 +71,7 @@ def main():
     f = gzip.open(args.fasta_file, 'rb')
     count = 0
     b = bytes('>', 'utf-8')[0]
-    no_selected_seqeuences = 0
+    no_selected_sequences = 0
     no_unannotated = 0
     no_unselected_sequences = 0
     
