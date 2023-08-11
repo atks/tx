@@ -22,7 +22,7 @@ import os
 import argparse
 import textwrap
 import tarfile
-import gzip
+import bgzf
 import re
 import sys
 import time
@@ -61,16 +61,15 @@ def main():
     #unpickle taxonomic database
     start = time.time()
     print('Unpickling database')
-    with gzip.open(f"{args.txdb_dir}/taxnodes.pickle.gz", 'rb') as handle:
+    with bgzip.open(f"{args.txdb_dir}/taxnodes.pickle.gz", 'rb') as handle:
         TAXNODES = pickle.load(handle)
-    with gzip.open(f"{args.txdb_dir}/names.pickle.gz", 'rb') as handle:
+    with bgzip.open(f"{args.txdb_dir}/names.pickle.gz", 'rb') as handle:
         NAMES = pickle.load(handle)
     end = time.time()
     time_elapsed = round(end - start, 0)
     print(f'Time elapse: {time_elapsed}s')
         
     #process fasta file
-    f = gzip.open(args.fasta_file, 'rb')
     count = 0
     b = bytes('>', 'utf-8')[0]
     no_selected_sequences = 0
@@ -79,23 +78,24 @@ def main():
     no_virus = 0
     no_not_virus = 0
 
-    for line in f:
-        if line[0] == b:
-            sline = line.decode('utf-8')
-            tax_id = re.search('TaxID=(\d+)', sline)
-            if tax_id is not None:
-                tid = tax_id.group(1)
-                if tid in TAXNODES:
-                    if travel_up(TAXNODES[tid], TAXNODES, NAMES, False):
-                        no_virus += 1
-                        print(sline, end='')
+    with bgzip.open(args.fasta_file, 'rb') as f: 
+        for line in f:
+            if line[0] == b:
+                sline = line.decode('utf-8')
+                tax_id = re.search('TaxID=(\d+)', sline)
+                if tax_id is not None:
+                    tid = tax_id.group(1)
+                    if tid in TAXNODES:
+                        if travel_up(TAXNODES[tid], TAXNODES, NAMES, False):
+                            no_virus += 1
+                            print(sline, end='')
+                        else:
+                            no_not_virus += 1
                     else:
-                        no_not_virus += 1
-                else:
-                    no_unannotated += 1            
-            count += 1
-            if count%100000==0:
-                print(f'lines processed : {count}', file=sys.stderr)            
+                        no_unannotated += 1            
+                count += 1
+                if count%100000==0:
+                    print(f'lines processed : {count}', file=sys.stderr)            
 
     #report stats
     print(f'No. virus:        {no_virus}') 
